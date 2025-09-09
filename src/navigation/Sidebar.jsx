@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import "simplebar-react/dist/simplebar.min.css";
-import SimpleBar from "simplebar-react";
+// import SimpleBar from "simplebar-react";
 import favicon from "@/images/faviconV2.png";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import HomeIcon from "@mui/icons-material/Home";
@@ -24,13 +24,11 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import SecurityIcon from '@mui/icons-material/Security';
 import SpeedIcon from '@mui/icons-material/Speed';
-import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
-
-import Schema from "@/images/Schema.jsx"
-
 import styles from "@/navigation/styles.module.css";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
+const SimpleBar = dynamic(() => import("simplebar-react"), { ssr: false });
 
 export default function SideBar() {
   const sidebarMenu = [
