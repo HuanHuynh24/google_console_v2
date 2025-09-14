@@ -59,6 +59,7 @@ export default function IndexChart() {
               tickFormatter={(value) => value.split(", ")[1]}
               interval={4}
               padding={{ left: 5, right: 5 }} // 👈 tránh dư 2 bên
+              tickLine={false}
             />
             <YAxis
               axisLine={false}
@@ -66,34 +67,39 @@ export default function IndexChart() {
               tick={{ fontSize: 12, dx: -5 }}
             />
             <Tooltip
+              cursor={{
+                stroke: "#999",       // màu
+                strokeWidth: 1,       // độ dày
+                strokeDasharray: "1 1", // 👈 nét đứt (4px vẽ, 4px trống)
+              }}
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
                   const notIndexed = payload.find((p) => p.name === "Chưa lập chỉ mục")?.value ?? 0;
                   const indexed = payload.find((p) => p.name === "Được lập chỉ mục")?.value ?? 0;
 
                   return (
-                    <div className="bg-white border border-gray-300 rounded-md p-2 text-sm shadow-md">
+                    <div className="bg-white border border-gray-300 p-2 text-sm shadow-md">
                       {/* Ngày */}
-                      <div className="font-medium text-gray-800 mb-2 ">{label}</div>
+                      <div className="font-medium text-gray-500 mb-2 py-2">{label}</div>
 
                       {/* Chưa lập chỉ mục */}
-                      <div className="flex items-center justify-between mb-1 gap-3">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between mb-1 gap-3 py-2">
+                        <div className="flex items-center gap-3">
                           {/* gạch màu xám */}
-                          <span className="inline-block w-4 h-[3px] bg-gray-400 rounded" />
-                          <span className="text-sm text-gray-600">Chưa lập chỉ mục </span>
+                          <span className="inline-block w-3 h-[4px] bg-gray-400 rounded" />
+                          <span className="text-sm text-gray-400">Chưa lập chỉ mục </span>
                         </div>
-                        <div className="text-sm font-semibold text-brown-50">{notIndexed}</div>
+                        <div className="text-sm font-semibold text-gray-500">{notIndexed}</div>
                       </div>
 
                       {/* Được lập chỉ mục */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
                           {/* gạch màu xanh */}
-                          <span className="inline-block w-4 h-[3px] bg-green-600 rounded" />
-                          <span className="text-sm text-gray-700">Được lập chỉ mục </span>
+                          <span className="inline-block w-3 h-[4px] bg-green-600 rounded" />
+                          <span className="text-sm text-gray-400">Được lập chỉ mục </span>
                         </div>
-                        <div className="text-sm font-semibold text-brown-50">{indexed}</div>
+                        <div className="text-sm font-semibold text-gray-500">{indexed}</div>
                       </div>
                     </div>
                   );
@@ -101,27 +107,52 @@ export default function IndexChart() {
                 return null;
               }}
             />
-            {/* Line xám */}
             <Line
-              type="monotone"
+              type="linear"
               dataKey="Chưa lập chỉ mục"
               stroke="#939495"
               strokeWidth={2}
-              dot={false}
+              dot={({ index, cx, cy, payload }) => {
+                if (index === data.length - 1) {
+                  return (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={4}
+                      fill="#939495"
+                      stroke="none"
+                    />
+                  );
+                }
+                return null;
+              }}
+              activeDot={{ r: 4, fill: "#939495", stroke: "none" }}
             />
 
-            {/* Line xanh lá */}
             <Line
-              type="monotone"
+              type="linear"
               dataKey="Được lập chỉ mục"
               stroke="#1a7433ff"
               strokeWidth={2}
-              dot={false}
+              dot={({ index, cx, cy, payload }) => {
+                if (index === data.length - 1) {
+                  return (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={4}
+                      fill="#1a7433ff"
+                      stroke="none"
+                    />
+                  );
+                }
+                return null;
+              }}
+              activeDot={{ r: 4, fill: "#1a7433ff", stroke: "none" }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
     </div>
-
   );
 }

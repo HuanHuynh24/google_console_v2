@@ -29,7 +29,7 @@ const faqData = [
 
 export default function AdvancedFeaturesTable() {
   return (
-    <div className="bg-white rounded-xl shadow p-6">
+    <div className="bg-white rounded-xl p-6">
       <h2 className="text-2xl mb-6">Các tính năng nâng cao</h2>
 
       <div className="overflow-x-auto">
@@ -54,8 +54,8 @@ export default function AdvancedFeaturesTable() {
               <td className="py-3 px-4 w-26 text-start">
                 <ResponsiveContainer width="100%" height={22}>
                   <LineChart data={duongDanData}>
-                    <Line type="monotone" dataKey="green" stroke="#036f2bff" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="green" stroke="#036f2bff" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </td>
@@ -81,8 +81,8 @@ export default function AdvancedFeaturesTable() {
               <td className="py-3 px-4 w-26 text-start">
                 <ResponsiveContainer width="100%" height={22}>
                   <LineChart data={faqData}>
-                    <Line type="monotone" dataKey="green" stroke="#036f2bff" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="green" stroke="#036f2bff" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </td>

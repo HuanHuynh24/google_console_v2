@@ -19,7 +19,7 @@ export default function OverView() {
 
       {/* Banner trên cùng */}
       <div className="w-full max-w-[912px] ml-[101px] mt-6">
-        <div className="bg-white border border-[#dadce0] rounded-xl px-5 py-4 shadow-sm flex items-center justify-between">
+        <div className="bg-white rounded-xl px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-5 text-sm">
             <LightbulbOutlinedIcon className="text-[#f9ab00]" size={22} />
             <span className="text-[#202124]">
@@ -34,7 +34,7 @@ export default function OverView() {
 
       {/* Card biểu đồ */}
       <div className="w-full max-w-[912px] ml-[101px] mt-6">
-        <div className="bg-white rounded-xl shadow p-4">
+        <div className="bg-white rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-2xl py-2">Hiệu suất</h3>
             <button className="text-[#1a73e8] text-sm font-medium flex items-center gap-1 hover:underline">
@@ -55,7 +55,7 @@ export default function OverView() {
       </div>
 
       <div className="w-full max-w-[912px] ml-[101px] mt-6">
-        <div className="bg-[#e8edf6] rounded-xl shadow p-6">
+        <div className="bg-[#e8edf6] rounded-xl p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export default function OverView() {
 
       {/* Card lập chỉ mục */}
       <div className="w-full max-w-[912px] ml-[101px] mt-6">
-        <div className="bg-white rounded-xl shadow p-4">
+        <div className="bg-white rounded-xl p-4">
           {/* Header */}
           <div className="mb-4">
             {/* Title */}

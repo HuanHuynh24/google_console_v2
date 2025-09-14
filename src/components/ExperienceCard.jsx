@@ -27,7 +27,7 @@ const faqData = [
 ];
 export default function ExperienceTable() {
   return (
-    <div className="bg-white rounded-xl shadow p-6">
+    <div className="bg-white rounded-xl p-6">
       {/* Title */}
       <h2 className="text-2xl mb-4">Trải nghiệm</h2>
 
@@ -62,8 +62,8 @@ export default function ExperienceTable() {
               <td className="py-1 px-3 w-24">
                 <ResponsiveContainer width="100%" height={24}>
                   <LineChart data={duongDanData}>
-                    <Line type="monotone" dataKey="orange" stroke="#d34d09ff" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="orange" stroke="#d34d09ff" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </td>
@@ -112,8 +112,8 @@ export default function ExperienceTable() {
               <td className="py-3 px-3 w-24">
                 <ResponsiveContainer width="100%" height={24}>
                   <LineChart data={faqData}>
-                    <Line type="monotone" dataKey="green" stroke="#16a34a" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="green" stroke="#16a34a" strokeWidth={2} dot={false} />
+                    <Line type="linear" dataKey="red" stroke="#dc2626" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </td>
