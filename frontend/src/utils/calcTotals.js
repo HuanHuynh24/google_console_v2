@@ -1,30 +1,39 @@
 export function calcTotals(data) {
-    const totals = data.reduce(
-      (acc, item) => {
-        const impressions = Number(item.impressions);
-        const clicks = Number(item.clicks);
-        const position = Number(item.position);
+  const totals = data.reduce(
+    (acc, item) => {
+      const impressions = Number(item.impressions) || 0;
+      const clicks = Number(item.clicks) || 0;
+      const position = Number(item.position);
 
-        acc.impressions += impressions;
-        acc.clicks += clicks;
-        acc.positions.push(position);
+      acc.impressions += impressions;
+      acc.clicks += clicks;
 
-        return acc;
-      },
-      { impressions: 0, clicks: 0, positions: [] }
-    );
+      // chỉ cộng nếu position là số hợp lệ
+      if (!Number.isNaN(position)) {
+        acc.weightedPositionSum += position * impressions;
+      }
 
-    // Tính CTR tổng thể
-    const ctr = (totals.clicks * 100) / (totals.impressions || 1);
+      return acc;
+    },
+    { impressions: 0, clicks: 0, weightedPositionSum: 0 }
+  );
 
-    // Tính vị trí trung bình
-    const avgPosition =
-      totals.positions.reduce((a, b) => a + b, 0) / totals.positions.length;
+  // CTR tổng
+  const ctr =
+    totals.impressions > 0
+      ? (totals.clicks * 100) / totals.impressions
+      : 0;
 
-    return {
-      impressions: totals.impressions,
-      clicks: totals.clicks,
-      ctr: ctr.toFixed(2), // % với 2 số thập phân
-      position: avgPosition.toFixed(2), // trung bình với 2 số thập phân
-    };
-  }
+  // Vị trí trung bình theo chuẩn GSC (weighted by impressions)
+  const avgPosition =
+    totals.impressions > 0
+      ? totals.weightedPositionSum / totals.impressions
+      : 0;
+
+  return {
+    impressions: totals.impressions,
+    clicks: totals.clicks,
+    ctr: ctr.toFixed(2),       // %
+    position: avgPosition.toFixed(2), // avg position
+  };
+}

@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import SummaryCards from "./SummaryCards";
 import styles from "@/components/style.module.css";
@@ -11,34 +12,55 @@ import {
   XAxis,
   YAxis,
   Label,
-  Area,
 } from "recharts";
 
-// Giả định default data
+/* ========= DEFAULT DATA (fallback) ========== */
 const defaultChartData = [
-  { date: "15/6/25", clicks: 90, position: 13.7 },
-  { date: "26/6/25", clicks: 120, position: 14.7 },
-  { date: "7/7/25", clicks: 110, position: 15.8 },
-  // Thêm dữ liệu khác nếu cần
+  { date: "21/11/25", clicks: 1, impressions: 100, ctr: 0.01, position: 20 },
+  { date: "22/11/25", clicks: 2, impressions: 120, ctr: 0.017, position: 19 },
+  { date: "23/11/25", clicks: 3, impressions: 130, ctr: 0.018, position: 18 },
+  { date: "24/11/25", clicks: 11, impressions: 300, ctr: 0.036, position: 17 },
+  { date: "25/11/25", clicks: 9, impressions: 260, ctr: 0.034, position: 17 },
+  { date: "26/11/25", clicks: 6, impressions: 220, ctr: 0.027, position: 17 },
+  { date: "27/11/25", clicks: 14, impressions: 310, ctr: 0.045, position: 17 },
 ];
+
 const defaultSummarys = [
   {
-    key: "clicks",
+    key: 0,
     dataKey: "clicks",
     title: "Lượt nhấp",
-    number: 100,
-    color: "#8884d8",
+    number: 46,
+    color: "#4285f4",
+    tooltipName: "Lượt nhấp",
   },
   {
-    key: "position",
+    key: 1,
+    dataKey: "impressions",
+    title: "Lượt hiển thị",
+    number: 2620,
+    color: "#673ab7",
+    tooltipName: "Lượt hiển thị",
+  },
+  {
+    key: 2,
+    dataKey: "ctr",
+    title: "CTR trung bình",
+    number: "1,8%",
+    color: "#009688",
+    tooltipName: "CTR trung bình",
+  },
+  {
+    key: 3,
     dataKey: "position",
-    title: "Vị trí",
-    number: 14,
-    color: "#ff7300",
+    title: "Vị trí trung bình",
+    number: 17,
+    color: "#f9ab00",
+    tooltipName: "Vị trí trung bình",
   },
 ];
 
-/* --- format helpers --- */
+/* ========= FORMAT HELPERS ========= */
 const formatDate = (dateLabel) => {
   let d;
   if (dateLabel instanceof Date) d = dateLabel;
@@ -85,7 +107,7 @@ const formatValue = (key, value) => {
   return value;
 };
 
-/* --- custom tooltip --- */
+/* ========= TOOLTIP ========= */
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
@@ -112,6 +134,7 @@ const CustomTooltip = ({ active, payload, label }) => {
                   style={{ background: item.color }}
                 />
                 <span className="text-gray-600 whitespace-nowrap">
+                  {/* item.name đến từ prop `name` của <Line /> */}
                   {item.name}
                 </span>
               </div>
@@ -127,81 +150,94 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function PerformanceChart({
-  chartData = defaultChartData,
-  summarys = defaultSummarys,
-  visibleColumns: propVisibleColumns,
-  setVisibleColumns: propSetVisibleColumns,
-  indexQueryTime,
-}) {
-  const [localActive, setLocalActive] = useState(summarys.map((s) => s.key));
+/* ========= CUSTOM Y-AXIS LABEL RENDERER ========= */
+const createYAxisLabelRenderer =
+  (orientation, text) =>
+  (props) => {
+    const vb = props.viewBox || {};
+    const { x = 0, y = 0, width = 0 } = vb;
 
-  const visibleDataKeys = propVisibleColumns
-    ? propVisibleColumns
-    : summarys.filter((s) => localActive.includes(s.key)).map((s) => s.dataKey);
-  console.log("visibleDataKeys", visibleDataKeys);
-  const toggleByDataKey = (dataKey) => {
-    if (propSetVisibleColumns) {
-      propSetVisibleColumns((prev) =>
-        prev.includes(dataKey)
-          ? prev.length === 1
-            ? prev
-            : prev.filter((c) => c !== dataKey)
-          : [...prev, dataKey]
-      );
-      return;
-    }
-    const s = summarys.find((x) => x.dataKey === dataKey);
-    if (!s) return;
-    setLocalActive((prev) =>
-      prev.includes(s.key)
-        ? prev.length === 1
-          ? prev
-          : prev.filter((i) => i !== s.key)
-        : [...prev, s.key]
-    );
-  };
-
-  const listActiveKeys = summarys
-    .filter((s) => visibleDataKeys.includes(s.dataKey))
-    .map((s) => s.key);
-
-  const renderYAxisLabel = (isLeft, value) => (props) => {
-    const { x = 0, y = 0, width = 0, height = 0 } = props || {};
-    const paddingX = 8;
-    const paddingTop = 14;
-
-    const tx = isLeft ? x + paddingX : x + width - paddingX;
-    const ty = y + paddingTop;
-    const anchor = isLeft ? "start" : "end";
+    const paddingX = 4;
+    // đẩy label lên trên vùng chart để không đè tick top
+    const ty = y - 20
+    const tx =
+      orientation === "left" ? x + paddingX : x + width - paddingX;
 
     return (
       <text
         x={tx}
         y={ty}
-        textAnchor={anchor}
+        textAnchor={orientation === "left" ? "start" : "end"}
         style={{
           fontSize: 12,
           fill: "#555",
           fontWeight: 300,
-          pointerEvents: "none",
         }}
       >
-        {value}
+        {text}
       </text>
     );
   };
-  const newData = chartData.map((item) => {
-    return Object.fromEntries(
-      Object.entries(item).map(([key, value]) => [
-        key,
-        key === "date" || visibleDataKeys.includes(key) ? value : 0,
-      ])
-    );
-  });
+
+/* ========= MAIN COMPONENT ========= */
+export default function PerformanceChart({
+  chartData = defaultChartData,
+  summarys = defaultSummarys,
+  visibleColumns: propVisibleColumns,
+  setVisibleColumns: propSetVisibleColumns,
+}) {
+  const isControlled = !!propVisibleColumns && !!propSetVisibleColumns;
+
+  // MẶC ĐỊNH: bật 2 metric đầu (Lượt nhấp + Lượt hiển thị)
+  const [internalVisible, setInternalVisible] = useState(() =>
+    summarys.slice(0, 2).map((s) => s.dataKey)
+  );
+
+  useEffect(() => {
+    if (!isControlled) {
+      setInternalVisible(summarys.slice(0, 2).map((s) => s.dataKey));
+    }
+  }, [summarys, isControlled]);
+
+  const visibleDataKeys = isControlled ? propVisibleColumns : internalVisible;
+
+  const toggleMetric = (dataKey) => {
+    if (isControlled) {
+      propSetVisibleColumns((prev) =>
+        prev.includes(dataKey)
+          ? prev.length === 1
+            ? prev
+            : prev.filter((k) => k !== dataKey)
+          : [...prev, dataKey]
+      );
+    } else {
+      setInternalVisible((prev) =>
+        prev.includes(dataKey)
+          ? prev.length === 1
+            ? prev
+            : prev.filter((k) => k !== dataKey)
+          : [...prev, dataKey]
+      );
+    }
+  };
+
+  const activeSummaries = summarys.filter((s) =>
+    visibleDataKeys.includes(s.dataKey)
+  );
+
+  console.log(activeSummaries)
+  /* ===== X-AXIS: chia tick giống GCS ===== */
+  const len = chartData?.length || 0;
+  const MAX_TICKS = 8;
+  let xInterval = 0;
+  if (len > MAX_TICKS) {
+    const step = Math.ceil(len / MAX_TICKS);
+    xInterval = step - 1;
+  }
 
   return (
     <div className="w-full bg-white rounded-xl overflow-hidden shadow-sm">
+      {/* SUMMARY CARDS */}
       <div className={`flex ${styles.summarys}`}>
         {summarys.map((item, index) => (
           <SummaryCards
@@ -211,129 +247,92 @@ export default function PerformanceChart({
             title={item.title}
             number={item.number}
             color={item.color}
-            onClick={() => toggleByDataKey(item.dataKey)}
+            onClick={() => toggleMetric(item.dataKey)}
           />
         ))}
       </div>
 
-      <div className="w-full h-[300px] px-4 py-2">
+      {/* CHART */}
+      <div className="w-full h-[300px] py-2 pt-5">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={
-              visibleDataKeys.length <= 2
-                ? { top: 40, right: -20, left: -20, bottom: 20 }
-                : { top: 40, right: 30, left: 30, bottom: 20 }
-            }
+            margin={{
+              top: 34,
+              right: 10,
+              left: 10,
+              bottom: 24,
+            }}
           >
-            <CartesianGrid
-              stroke="#f1f3f4"
-              vertical={false}
-              horizontal={true}
-            />
+            <CartesianGrid stroke="#f1f3f4" vertical={false} horizontal />
+
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, dy: 6, textAnchor: "middle" }}
+              tick={{ fontSize: 12, dy: 6 }}
               axisLine={false}
               tickLine={false}
-              dx={14}
-              interval={
-                indexQueryTime === 4
-                  ? 10
-                  : indexQueryTime === 6
-                  ? 19
-                  : indexQueryTime === 12 || indexQueryTime === 16
-                  ? 30
-                  : indexQueryTime === 3
-                  ? 5
-                  : indexQueryTime === 2
-                  ? 0
-                  : "preserveStartEnd"
-              }
+              tickMargin={6}
+              interval={xInterval}
+              padding={{ left: 0, right: 0 }}
             />
-            {/* {listActiveKeys.map((key, index) => {
-              const summary = summarys.find((s) => s.key === key);
-              if (!summary) return null;
-              console.log("sum", summary);
-              const showAxis = listActiveKeys.length <= 2;
+
+            {activeSummaries.map((summary, index) => {
+              const isPosition = summary.dataKey === "position";
+              const domain = isPosition ? ["auto", "auto"] : [0, "auto"];
+
+              const showAxis = index < 2;
+              if (!showAxis) {
+                return (
+                  <YAxis
+                    key={summary.dataKey}
+                    yAxisId={summary.dataKey}
+                    domain={domain}
+                    reversed={isPosition}
+                    hide
+                  />
+                );
+              }
+
+              const orientation =
+                activeSummaries.length === 1
+                  ? "left"
+                  : index === 0
+                  ? "left"
+                  : "right";
+
+              // 👉 LUÔN ưu tiên title cho tên cột
+              const labelText =  summary.tooltipName ;
+
+              // HIỂN LABEL KHI ĐANG BẬT 1 HOẶC 2 METRIC
+              const shouldShowLabel = activeSummaries.length <= 2;
+
               return (
                 <YAxis
-                  key={summary.key}
-                  yAxisId={summary.key}
-                  domain={["auto", "auto"]}
-                  hide={!showAxis}
-                  tickCount={4}
-                  reversed={summary.dataKey === "position"}
+                  key={summary.dataKey}
+                  yAxisId={summary.dataKey}
+                  domain={domain}
+                  reversed={isPosition}
                   tick={{ fontSize: 12 }}
-                  orientation={
-                    listActiveKeys.length === 2
-                      ? index === 0
-                        ? "left"
-                        : "right"
-                      : "left"
+                  tickFormatter={(v) =>
+                    formatValue(summary.dataKey, v)
                   }
-                  tickFormatter={(v) => formatValue(summary.dataKey, v)}
                   axisLine={false}
                   tickLine={false}
-                  width={60}
+                  width={56}
+                  orientation={orientation}
                 >
-                  {showAxis && (
+                  {shouldShowLabel && (
                     <Label
-                      value={summary.tooltipName}
-                      position="insideTop"
-                      offset={-25}
-                      style={{
-                        fontSize: 12,
-                        fill: "#555",
-                        fontWeight: 300,
-                        textAnchor: index === 0 ? "start" : "end",
-                      }}
-                    />
-                  )}
-                </YAxis>
-              );
-            })} */}
-            {listActiveKeys.map((key, index) => {
-              const summary = summarys.find((s) => s.key === key);
-              if (!summary) return null;
-              const showAxis = listActiveKeys.length <= 2;
-              return (
-                <YAxis
-                  key={summary.key}
-                  yAxisId={summary.key}
-                  domain={["auto", "auto"]}
-                  hide={!showAxis}
-                  tickCount={4}
-                  reversed={summary.dataKey === "position"}
-                  tick={{ fontSize: 12 }}
-                  orientation={
-                    listActiveKeys.length === 2
-                      ? index === 0
-                        ? "left"
-                        : "right"
-                      : "left"
-                  }
-                  tickFormatter={(v) => formatValue(summary.dataKey, v)}
-                  axisLine={false}
-                  tickLine={false}
-                  width={60}
-                >
-                  {showAxis && (
-                    <Label
-                      value={summary.tooltipName}
-                      position="insideTop"
-                      offset={-25}
-                      style={{
-                        fontSize: 12,
-                        fill: "#555",
-                        fontWeight: 300,
-                        textAnchor: index === 0 ? "start" : "end",
-                      }}
+                      content={createYAxisLabelRenderer(
+                        orientation,
+                        labelText
+                      )}
                     />
                   )}
                 </YAxis>
               );
             })}
+
             <Tooltip
               content={<CustomTooltip />}
               cursor={{
@@ -341,25 +340,11 @@ export default function PerformanceChart({
                 strokeWidth: 2,
                 strokeDasharray: "3 3",
               }}
-              position={{ y: -20 }}
               wrapperStyle={{ zIndex: 1000 }}
             />
+
             {summarys.map(
               (s) =>
-                // <Area
-                //   key={s.key}
-                //   type="linear"
-                //   dataKey={s.dataKey}
-                //   stroke={s.color} // Đường viền
-                //   strokeWidth={2}
-                //   fill={s.color} // Màu nền
-                //   fillOpacity={0.3} // Độ trong suốt (0 đến 1)
-                //   activeDot={{ r: 4, fill: s.color, stroke: "none" }}
-                //   isAnimationActive={true}
-                //   animationDuration={1500}
-                //   animationEasing="ease-out"
-                //   yAxisId={s.key}
-                // />
                 visibleDataKeys.includes(s.dataKey) && (
                   <Line
                     key={s.key}
@@ -369,12 +354,10 @@ export default function PerformanceChart({
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 4, fill: s.color, stroke: "none" }}
+                    // 🔥 Tooltip & legend hiển thị đúng `title`
                     name={s.tooltipName}
                     isAnimationActive={false}
-                    animationDuration={1500}
-                    animationEasing="ease-out"
-                    animationBegin={0}
-                    yAxisId={s.key}
+                    yAxisId={s.dataKey}
                   />
                 )
             )}

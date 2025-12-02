@@ -1,4 +1,5 @@
 "use client";
+
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import CheckIcon from "@mui/icons-material/Check";
@@ -16,172 +17,94 @@ import { calcTotals } from "@/utils/calcTotals";
 import DateRangePopup from "@/components/DateRangePopup";
 
 export default function OverView() {
+  const now = new Date();
+
+  // --- STATE CHÍNH ---
   const [itemActice, setActiveItem] = useState(4);
-  const [activeTab, setActiveTab] = useState(1); // default "TRANG"
+  const [activeTab, setActiveTab] = useState(1);
   const [loading, setLoading] = useState(false);
   const [initData, setInitData] = useState([]);
-  // visibleColumns lưu dataKey: "clicks" | "impressions" | "ctr" | "position"
+  const [queryData, setQueryData] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [valueSummarys, setValueSummarys] = useState([]);
   const [visibleColumns, setVisibleColumns] = useState([
     "clicks",
     "impressions",
     "ctr",
     "position",
   ]);
-  const now = new Date();
-  const [queryTime, setQueryTime] = useState(
-    new Date().getMonth(now.getMonth() - 3)
-  );
+
+  // --- RANGE THỜI GIAN ---
+  const [queryTime, setQueryTime] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3);
+    return d;
+  });
+
+  const [queryEndTime, setQueryEndTime] = useState(new Date());
   const [indexQueryTime, setIndexQueryTime] = useState(4);
-  const [queryData, setQueryData] = useState([]);
-  const [chartData, setChartData] = useState([]);
-  const [valueSummarys, setValueSummarys] = useState([]);
-  // --- table fake data (theo cấu trúc bạn dùng trong table)
+
+  // popup DateRangePopup
   const [isOpen, setIsOpen] = useState(false);
 
+  // -------------------- API CALL ---------------------
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const res = await getDataGroupByKeyWord(1, queryTime, now);
+        const res = await getDataGroupByKeyWord(2, queryTime, queryEndTime);
         setQueryData(res);
-        setLoading(false);
       } catch (err) {
-        setLoading(false);
-        console.error("Lỗi khi gọi API:", err);
+        console.error("Error get keywords:", err);
       }
+      setLoading(false);
     }
     fetchData();
-  }, [queryTime]);
+  }, [queryTime, queryEndTime]);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const res = await getDataGroupByDate("1", queryTime, now);
-        const sortedData = [...res].sort((a, b) => {
-          const [dayA, monthA, yearA] = a.date.split("/").map(Number);
-          const [dayB, monthB, yearB] = b.date.split("/").map(Number);
+        const res = await getDataGroupByDate(2, queryTime, queryEndTime);
 
-          const dateA = new Date(2000 + yearA, monthA - 1, dayA); // '25' -> 2025
-          const dateB = new Date(2000 + yearB, monthB - 1, dayB);
-
-          return dateA - dateB; // tăng dần
-          // return dateB - dateA; // giảm dần
+        const sorted = [...res].sort((a, b) => {
+          const [d1, m1, y1] = a.date.split("/").map(Number);
+          const [d2, m2, y2] = b.date.split("/").map(Number);
+          return new Date(2000 + y1, m1 - 1, d1) - new Date(2000 + y2, m2 - 1, d2);
         });
 
-        setChartData(sortedData);
-        setLoading(false);
+        setChartData(sorted);
       } catch (err) {
-        setLoading(false);
-        console.error("Lỗi khi gọi API:", err);
+        console.error("Error get chart:", err);
       }
+      setLoading(false);
     }
     fetchData();
-  }, [queryTime]);
+  }, [queryTime, queryEndTime]);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const res = await getDataGroupByPage("1", queryTime, now);
+        const res = await getDataGroupByPage(2, queryTime, queryEndTime);
         setInitData(res);
-        setLoading(false);
       } catch (err) {
-        setLoading(false);
-        console.error("Lỗi khi gọi API:", err);
+        console.error("Error get pages:", err);
       }
+      setLoading(false);
     }
     fetchData();
-  }, [queryTime]);
+  }, [queryTime, queryEndTime]);
 
+  // summarys
   useEffect(() => {
     if (chartData.length > 0) {
       setValueSummarys(formatStats(calcTotals(chartData)));
     }
   }, [chartData]);
-  // --- summarys mapping (dataKey dùng để bật/tắt cột)
-  const summarys = [
-    {
-      key: 0,
-      title: "Tổng số lượt nhấp",
-      number: valueSummarys.clicks,
-      color: "#4285f4",
-      dataKey: "clicks",
-      tooltipName: "Lượt nhấp",
-    },
-    {
-      key: 1,
-      title: "Tổng số lượt hiể...",
-      number: valueSummarys.impressions,
-      color: "#673ab7",
-      dataKey: "impressions",
-      tooltipName: "Lượt hiển thị",
-    },
-    {
-      key: 2,
-      title: "CTR trung bình",
-      number: valueSummarys.ctr ? valueSummarys.ctr + "%" : "",
-      color: "#009688",
-      dataKey: "ctr",
-      tooltipName: "CTR",
-    },
-    {
-      key: 3,
-      title: "Vị trí trung bình",
-      number: valueSummarys.position,
-      color: "#dc650bff",
-      dataKey: "position",
-      tooltipName: "Vị trí",
-    },
-  ];
-  const handleClickChangeTime = (index) => {
-    let time = new Date(now);
 
-    switch (index) {
-      case 1:
-        time.setDate(time.getDate() - 1);
-        setIndexQueryTime(1);
-        setActiveItem(1);
-        break;
-      case 2:
-        time.setDate(time.getDate() - 7);
-        setIndexQueryTime(2);
-        setActiveItem(2);
-        break;
-      case 3:
-        time.setDate(time.getDate() - 28);
-        setIndexQueryTime(3);
-        setActiveItem(3);
-        break;
-      case 4:
-        time.setMonth(time.getMonth() - 3);
-        setIndexQueryTime(4);
-        setActiveItem(4);
-        break;
-      case 5:
-        time.setMonth(time.getMonth() - 6);
-        setIndexQueryTime(6);
-        setActiveItem(10);
-        break;
-      case 6:
-        time.setMonth(time.getMonth() - 12);
-        setIndexQueryTime(12);
-        setActiveItem(10);
-        break;
-      case 7:
-        time.setMonth(time.getMonth() - 16);
-        setIndexQueryTime(16);
-        setActiveItem(10);
-        break;
-      default:
-        console.log("error");
-        setActiveItem(1);
-        break;
-    }
-
-    setQueryTime(time);
-  };
-
+  // mapping data → table
   const tabData = useMemo(
     () => ({
       0: queryData,
@@ -190,106 +113,217 @@ export default function OverView() {
     [queryData, initData]
   );
 
+  // -------------------- HANDLE PRESET TIME ---------------------
+  const handleClickChangeTime = (index) => {
+    let start = new Date(now);
+    const end = new Date(now);
+
+    switch (index) {
+      case 1: // 24h
+        start.setDate(start.getDate() - 1);
+        setIndexQueryTime(1);
+        setActiveItem(1);
+        break;
+
+      case 2: // 7 ngày
+        start.setDate(start.getDate() - 7);
+        setIndexQueryTime(2);
+        setActiveItem(2);
+        break;
+
+      case 3: // 28 ngày
+        start.setDate(start.getDate() - 28);
+        setIndexQueryTime(3);
+        setActiveItem(3);
+        break;
+
+      case 4: // 3 tháng
+        start.setMonth(start.getMonth() - 3);
+        setIndexQueryTime(4);
+        setActiveItem(4);
+        break;
+
+      default:
+        break;
+    }
+
+    setQueryTime(start);
+    setQueryEndTime(end);
+  };
+
+  // -------------------- HANDLE APPLY FROM POPUP ---------------------
+  const handleApplyDateRange = (startDate, endDate, optionIndex) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    console.log(startDate,"-", endDate)
+    // ---- CASE PRESET 6 THÁNG, 12 THÁNG, 16 THÁNG ----
+    if (optionIndex === 5) {
+      const t = new Date(now);
+      t.setMonth(t.getMonth() - 6);
+      setIndexQueryTime(6);
+      setActiveItem(10);
+      setQueryTime(t);
+      setQueryEndTime(now);
+      return;
+    }
+
+    if (optionIndex === 6) {
+      const t = new Date(now);
+      t.setMonth(t.getMonth() - 12);
+      setIndexQueryTime(12);
+      setActiveItem(10);
+      setQueryTime(t);
+      setQueryEndTime(now);
+      return;
+    }
+
+    if (optionIndex === 7) {
+      const t = new Date(now);
+      t.setMonth(t.getMonth() - 16);
+      setIndexQueryTime(16);
+      setActiveItem(10);
+      setQueryTime(t);
+      setQueryEndTime(now);
+      return;
+    }
+
+    // ---- CASE TÙY CHỈNH ----
+    if (optionIndex === 8) {
+      setIndexQueryTime("custom");
+      setActiveItem(10);
+      setQueryTime(start);
+      setQueryEndTime(end);
+      return;
+    }
+  };
+
+  // Buttons chọn thời gian
   const optionTime = [
     { key: 1, time: "24 giờ" },
     { key: 2, time: "7 ngày" },
     { key: 3, time: "28 ngày" },
     { key: 4, time: "3 tháng" },
-    {
-      key: 10,
-      time: "thêm",
-    },
+    { key: 10, time: "Thêm" },
   ];
 
   return (
     <div className="w-full h-[calc(100vh-64px)]  ml-[104px]">
-      <div className="h-16 border-b-1 border-[#c4c7c5] flex items-center justify-between">
-        <h2 className="text-[21px] font-medium">Hiệu suất</h2>{" "}
+      <div className="h-16 border-b border-[#c4c7c5] flex items-center justify-between">
+        <h2 className="text-[21px] font-medium">Hiệu suất</h2>
         <div className="flex gap-2 pr-8">
           <FileDownloadIcon />
           <h2 className="font-medium">XUẤT</h2>
         </div>
       </div>
 
+      {/* Time selection */}
       <div className=" mr-6 py-4 ">
         <div className="flex">
-          <div className="flex border-r  rounded-r-[8px] overflow-hidden  ">
+          <div className="flex border-r  rounded-r-[8px] overflow-hidden">
             {optionTime.map((item) => {
               const index = item.key;
               return (
                 <div
+                  key={item.key}
                   onClick={() => {
-                    handleClickChangeTime(index);
-                    if (index == 10) {
+                    if (index === 10) {
                       setIsOpen(true);
+                    } else {
+                      handleClickChangeTime(index);
                     }
                   }}
-                  key={item.key}
                   className={`h-[30px] ${
                     index === itemActice
-                      ? "bg-[#c5e5ff] text-[#001d35]"
+                      ? "bg-[#c5e5ff] text-[#004a77]"
                       : "text-[#444746]"
-                  } hover:text-[#1f1f1f] hover:cursor-pointer font-medium text-sm flex items-center justify-center px-3 border-1 border-[#747775] ${
+                  } flex items-center font-medium text-sm px-3 border ${
                     index === 1 ? "rounded-l-[8px]" : ""
-                  }`}
+                  } cursor-pointer`}
                 >
-                  {index === itemActice ? (
-                    <CheckIcon className="!text-[18px] font-extrabold mr-2" />
-                  ) : (
-                    ""
-                  )}
+                  {index === itemActice && <CheckIcon className="mr-1" />}
                   {index === 10
-                    ? indexQueryTime == 6
+                    ? indexQueryTime === 6
                       ? "6 tháng"
-                      : indexQueryTime == 12
+                      : indexQueryTime === 12
                       ? "12 tháng"
-                      : indexQueryTime == 16
+                      : indexQueryTime === 16
                       ? "16 tháng"
+                      : indexQueryTime === "custom"
+                      ? "Tùy chỉnh"
                       : "Thêm"
                     : item.time}
 
                   {index === 10 && indexQueryTime < 6 && (
-                    <span>
-                      <ArrowDropDownIcon fontSize="small" />
-                    </span>
+                    <ArrowDropDownIcon fontSize="small" />
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* Bộ lọc phụ */}
           <div className="flex gap-2 pl-4">
-            <div
-              className={`h-[30px] hover:text-[#1f1f1f] hover:cursor-pointer rounded-[8px] font-medium text-sm flex items-center justify-center px-3 border-1 border-[#747775]`}
-            >
+            <div className="h-[30px] text-sm flex items-center border px-3 rounded-[8px] cursor-pointer">
               Loại tìm kiếm: Web
-              <span className="pl-2">
-                <ArrowDropDownIcon fontSize="small" />
-              </span>
+              <ArrowDropDownIcon fontSize="small" className="ml-2" />
             </div>
-            <div
-              className={`h-[30px]  hover:text-[#1f1f1f] hover:cursor-pointer rounded-[8px] font-medium text-sm flex items-center justify-center px-3 border-1 border-[#747775]`}
-            >
-              <AddIcon className="!text-[18px] mr-2" />
+
+            <div className="h-[30px] text-sm flex items-center border px-3 rounded-[8px] cursor-pointer">
+              <AddIcon className="mr-2" />
               Thêm bộ lọc
             </div>
-            <div
-              className={`h-[30px]  hover:cursor-pointer hover:bg-[#0b57d017] font-medium text-sm flex items-center justify-center px-3 hover:rounded-3xl text-[#0b57d0]`}
-            >
+
+            <div className="h-[30px] flex items-center px-3 cursor-pointer text-[#0b57d0]">
               Đặt lại bộ lọc
             </div>
           </div>
         </div>
       </div>
-      <p className="text-[15px] leading-[48px] text-right pr-8">
+
+      <p className="text-right pr-8 pb-5 text-[15px]">
         Lần cập nhật gần đây nhất: 10,5 giờ trước
       </p>
 
-      <div className="w-full max-h-[500px] overflow-y-scroll pr-6 pb-16 mt-[10px]">
+      {/* Main content */}
+      <div className="w-full max-h-[500px] overflow-y-scroll pr-6 pb-16 ">
         <div className="flex flex-col gap-6">
-          {/* truyền data + state quản lý cột xuống con */}
           <PerformanceChart
             chartData={chartData}
-            summarys={summarys}
+            summarys={[
+              {
+                key: 0,
+                title: "Tổng số lượt nhấp",
+                tooltipName:"Lượt nhấp",
+                number: valueSummarys.clicks,
+                color: "#4285f4",
+                dataKey: "clicks",
+              },
+              {
+                key: 1,
+                title: "Tổng số lượt hiển ...",
+                tooltipName:"Lượt hiển thị",
+                number: valueSummarys.impressions,
+                color: "#673ab7",
+                dataKey: "impressions",
+              },
+              {
+                key: 2,
+                title: "CTR trung bình",
+                tooltipName:"CTR trung bình",
+                number: valueSummarys.ctr ? valueSummarys.ctr + "%" : "",
+                color: "#009688",
+                dataKey: "ctr",
+              },
+              {
+                key: 3,
+                title: "Vị trí trung bình",
+                tooltipName:"Vị trí trung bình",
+                number: valueSummarys.position,
+                color: "#dc650b",
+                dataKey: "position",
+              },
+            ]}
             indexQueryTime={indexQueryTime}
             visibleColumns={visibleColumns}
             setVisibleColumns={setVisibleColumns}
@@ -305,10 +339,12 @@ export default function OverView() {
           )}
         </div>
       </div>
+
+      {/* POPUP RANGE DATE */}
       <DateRangePopup
         isOpen={isOpen}
         setIsOpen={setIsOpen}
-        handleClickChangeTime={handleClickChangeTime}
+        handleApply={handleApplyDateRange}
       />
     </div>
   );

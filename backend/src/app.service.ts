@@ -105,21 +105,33 @@ export class WebService {
     const query = this.detailRepository
       .createQueryBuilder('detail')
       .select("DATE_FORMAT(detail.timestamp, '%e/%c/%y')", 'date')
-      // chỉ lấy ngày
       .addSelect('COUNT(detail.id)', 'impressions')
       .addSelect('SUM(detail.isClick)', 'clicks')
       .addSelect(
         `ROUND(
-      SUM(detail.isClick) * 100.0 / NULLIF(COUNT(detail.id), 0),
-      2
-    )`,
+        SUM(detail.isClick) * 100.0 / NULLIF(COUNT(detail.id), 0),
+        2
+      )`,
         'ctr',
       )
       .addSelect('ROUND(AVG(detail.vitri), 2)', 'position')
       .where('detail.webId = :webId', { webId });
 
     if (from && to) {
-      query.andWhere('detail.timestamp BETWEEN :from AND :to', { from, to });
+      const endExclusive = new Date(to);
+      endExclusive.setDate(endExclusive.getDate() + 1);
+
+      query.andWhere('detail.timestamp >= :from AND detail.timestamp < :to', {
+        from,
+        to: endExclusive,
+      });
+    } else if (from) {
+      query.andWhere('detail.timestamp >= :from', { from });
+    } else if (to) {
+      const endExclusive = new Date(to);
+      endExclusive.setDate(endExclusive.getDate() + 1);
+
+      query.andWhere('detail.timestamp < :to', { to: endExclusive });
     }
 
     query.groupBy("DATE_FORMAT(detail.timestamp, '%e/%c/%y')");

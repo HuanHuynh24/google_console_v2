@@ -45,7 +45,7 @@ export default function SummaryCards({
           )}
         </span>
 
-        <span className="text-sm pl-2 leading-[16px]">{title}</span>
+        <span className="text-[13px] text-nowrap pl-2 leading-[16px]">{title}</span>
       </div>
 
       {/* Number */}
