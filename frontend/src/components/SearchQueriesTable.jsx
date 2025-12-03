@@ -8,6 +8,8 @@ import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
+const NUMERIC_COLUMNS = new Set(["clicks", "impressions", "ctr", "position"]);
+
 /* -----------------------------
    Tabs & headers
 ----------------------------- */
@@ -74,40 +76,50 @@ export default function SearchQueriesTable({
     propVisibleColumns ?? ["clicks", "impressions", "ctr", "position"];
 
   /* ------- SORTING ------- */
-  const handleSort = (column) => {
-    let direction = "asc";
-    if (sortColumn === column && sortDirection === "asc") direction = "desc";
+ const handleSort = (column) => {
+  let direction = "asc";
+  if (sortColumn === column && sortDirection === "asc") direction = "desc";
 
-    setSortColumn(column);
-    setSortDirection(direction);
-    setPage(1);
+  setSortColumn(column);
+  setSortDirection(direction);
+  setPage(1);
 
-    const raw = [...baseData]; // luôn sort từ data gốc
+  // luôn sort dựa trên data gốc của tab hiện tại
+  const raw = [...baseData];
 
-    const sorted = raw.sort((a, b) => {
-      const av = a[column];
-      const bv = b[column];
+  const isNumeric = NUMERIC_COLUMNS.has(column);
 
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
+  const sorted = raw.sort((a, b) => {
+    const av = a[column];
+    const bv = b[column];
 
-      // number sort
-      if (typeof av === "number" && typeof bv === "number") {
-        return direction === "asc" ? av - bv : bv - av;
-      }
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
 
-      // string sort
-      const comp = String(av).localeCompare(String(bv));
-      return direction === "asc" ? comp : -comp;
-    });
+    // Nếu là cột dạng số thì luôn convert sang số để sort
+    if (isNumeric) {
+      const na = typeof av === "number" ? av : parseFloat(String(av).replace("%", ""));
+      const nb = typeof bv === "number" ? bv : parseFloat(String(bv).replace("%", ""));
 
-    // Lưu sort theo tab
-    setSortedData((prev) => ({
-      ...prev,
-      [activeTab]: sorted,
-    }));
-  };
+      if (isNaN(na) && isNaN(nb)) return 0;
+      if (isNaN(na)) return 1;
+      if (isNaN(nb)) return -1;
+
+      return direction === "asc" ? na - nb : nb - na;
+    }
+
+    // Các cột còn lại sort theo chữ
+    const comp = String(av).localeCompare(String(bv));
+    return direction === "asc" ? comp : -comp;
+  });
+
+  setSortedData((prev) => ({
+    ...prev,
+    [activeTab]: sorted,
+  }));
+};
+
 
   const renderSortIcon = (column) => {
   const isActive = sortColumn === column;

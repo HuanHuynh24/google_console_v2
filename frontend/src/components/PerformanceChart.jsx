@@ -60,7 +60,7 @@ const defaultSummarys = [
   },
 ];
 
-/* ========= FORMAT HELPERS ========= */
+/* ========= FORMAT ========= */
 const formatDate = (dateLabel) => {
   let d;
   if (dateLabel instanceof Date) d = dateLabel;
@@ -107,6 +107,96 @@ const formatValue = (key, value) => {
   return value;
 };
 
+// format chỉ dùng cho TOOLTIP – luôn 1 chữ số thập phân, CTR có %
+const formatValue_2 = (key, value) => {
+  const num = Number(value);
+  if (Number.isNaN(num)) return value;
+
+  if (key === "ctr") {
+    const pct = num <= 1 ? num * 100 : num;
+    return pct.toFixed(1) + "%";
+  }
+
+  if (key === "position") {
+    return num.toFixed(1);
+  }
+
+  return num.toFixed(1);
+};
+
+/* ========= NICE STEP & Y-AXIS CONFIG (4 tick giống GSC) ========= */
+const niceStep = (rawStep) => {
+  if (rawStep <= 0) return 1;
+  const power = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const base = rawStep / power; // 1..10
+  let niceBase;
+  if (base <= 1) niceBase = 1;
+  else if (base <= 2) niceBase = 2;
+  else if (base <= 5) niceBase = 5;
+  else niceBase = 10;
+  return niceBase * power;
+};
+
+const buildYAxisConfig = (data, key, isPosition) => {
+  let min = Infinity;
+  let max = -Infinity;
+
+  data.forEach((row) => {
+    const v = Number(row[key]);
+    if (Number.isNaN(v)) return;
+    if (v < min) min = v;
+    if (v > max) max = v;
+  });
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return {
+      domain: isPosition ? ["auto", "auto"] : [0, "auto"],
+      ticks: undefined,
+    };
+  }
+
+  // ===== POSITION (chỉ 4 tick, làm tròn đẹp) =====
+  if (isPosition) {
+    let rawRange = max - min || 1;
+    let step = niceStep(rawRange / 3);
+
+    if (step <= 2) step = 2;
+    else if (step <= 5) step = 5;
+    else if (step <= 10) step = 10;
+    else if (step <= 20) step = 20;
+
+    let bottom = Math.ceil(max / step) * step;
+    let top = bottom - step * 3;
+
+    if (top > min && top - step >= 0) {
+      bottom -= step;
+      top -= step;
+    }
+
+    const ticks = [top, top + step, top + 2 * step, bottom];
+
+    return {
+      domain: [top, bottom], // reversed=true sẽ đảo hướng hiển thị
+      ticks,
+    };
+  }
+
+  // ===== CLICK / IMP / CTR (4 tick, từ 0) =====
+  const bottom = 0;
+  let maxVal = max <= 0 ? 1 : max;
+
+  let step = niceStep(maxVal / 3);
+  if (step <= 0) step = 1;
+
+  const top = step * 3; // 0, step, 2*step, 3*step
+  const ticks = [0, step, step * 2, top];
+
+  return {
+    domain: [bottom, top],
+    ticks,
+  };
+};
+
 /* ========= TOOLTIP ========= */
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -134,12 +224,11 @@ const CustomTooltip = ({ active, payload, label }) => {
                   style={{ background: item.color }}
                 />
                 <span className="text-gray-600 whitespace-nowrap">
-                  {/* item.name đến từ prop `name` của <Line /> */}
                   {item.name}
                 </span>
               </div>
               <span className="font-semibold text-gray-500">
-                {formatValue(item.dataKey, item.value)}
+                {formatValue_2(item.dataKey, item.value)}
               </span>
             </div>
           ))}
@@ -151,33 +240,29 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 /* ========= CUSTOM Y-AXIS LABEL RENDERER ========= */
-const createYAxisLabelRenderer =
-  (orientation, text) =>
-  (props) => {
-    const vb = props.viewBox || {};
-    const { x = 0, y = 0, width = 0 } = vb;
+const createYAxisLabelRenderer = (orientation, text) => (props) => {
+  const vb = props.viewBox || {};
+  const { x = 0, y = 0, width = 0 } = vb;
 
-    const paddingX = 4;
-    // đẩy label lên trên vùng chart để không đè tick top
-    const ty = y - 20
-    const tx =
-      orientation === "left" ? x + paddingX : x + width - paddingX;
+  const paddingX = 4;
+  const ty = y - 20;
+  const tx = orientation === "left" ? x + paddingX : x + width - paddingX;
 
-    return (
-      <text
-        x={tx}
-        y={ty}
-        textAnchor={orientation === "left" ? "start" : "end"}
-        style={{
-          fontSize: 12,
-          fill: "#555",
-          fontWeight: 300,
-        }}
-      >
-        {text}
-      </text>
-    );
-  };
+  return (
+    <text
+      x={tx}
+      y={ty}
+      textAnchor={orientation === "left" ? "start" : "end"}
+      style={{
+        fontSize: 12,
+        fill: "#555",
+        fontWeight: 300,
+      }}
+    >
+      {text}
+    </text>
+  );
+};
 
 /* ========= MAIN COMPONENT ========= */
 export default function PerformanceChart({
@@ -188,10 +273,22 @@ export default function PerformanceChart({
 }) {
   const isControlled = !!propVisibleColumns && !!propSetVisibleColumns;
 
-  // MẶC ĐỊNH: bật 2 metric đầu (Lượt nhấp + Lượt hiển thị)
+  // metric mặc định: 2 cái đầu (nhấp + hiển thị)
   const [internalVisible, setInternalVisible] = useState(() =>
     summarys.slice(0, 2).map((s) => s.dataKey)
   );
+
+  // width để tính margin theo mobile/desktop
+  const [screenWidth, setScreenWidth] = useState(1024);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setScreenWidth(window.innerWidth);
+      const onResize = () => setScreenWidth(window.innerWidth);
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isControlled) {
@@ -224,9 +321,9 @@ export default function PerformanceChart({
   const activeSummaries = summarys.filter((s) =>
     visibleDataKeys.includes(s.dataKey)
   );
+  const metricsCount = activeSummaries.length;
 
-  console.log(activeSummaries)
-  /* ===== X-AXIS: chia tick giống GCS ===== */
+  /* ===== X-AXIS ===== */
   const len = chartData?.length || 0;
   const MAX_TICKS = 8;
   let xInterval = 0;
@@ -235,14 +332,28 @@ export default function PerformanceChart({
     xInterval = step - 1;
   }
 
+  /* ===== MARGIN THEO MÀN HÌNH & SỐ METRIC ===== */
+  const isMobile = screenWidth < 768;
+  const baseLeftRightSmall = metricsCount <= 2 ? 16 : 24;
+  const baseLeftRightLarge = metricsCount <= 2 ? 24 : 40;
+
+  const chartMargin = {
+    top: isMobile ? 24 : 34,
+    bottom: 24,
+    left: isMobile ? baseLeftRightSmall : baseLeftRightLarge,
+    right: isMobile ? baseLeftRightSmall : baseLeftRightLarge,
+  };
+
+  const axisWidth = metricsCount <= 2 ? 40 : 56;
+
   return (
     <div className="w-full bg-white rounded-xl overflow-hidden shadow-sm">
       {/* SUMMARY CARDS */}
       <div className={`flex ${styles.summarys}`}>
-        {summarys.map((item, index) => (
+        {summarys.map((item) => (
           <SummaryCards
             key={item.key}
-            index={index}
+            index={item.key}
             active={visibleDataKeys.includes(item.dataKey)}
             title={item.title}
             number={item.number}
@@ -255,16 +366,13 @@ export default function PerformanceChart({
       {/* CHART */}
       <div className="w-full h-[300px] py-2 pt-5">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{
-              top: 34,
-              right: 10,
-              left: 10,
-              bottom: 24,
-            }}
-          >
-            <CartesianGrid stroke="#f1f3f4" vertical={false} horizontal />
+          <LineChart data={chartData} margin={chartMargin}>
+            <CartesianGrid
+              stroke="#f1f3f4"
+              vertical={false}
+              // chỉ vẽ line ngang khi 1–2 metric (giống GSC)
+              horizontal={metricsCount <= 2}
+            />
 
             <XAxis
               dataKey="date"
@@ -278,33 +386,39 @@ export default function PerformanceChart({
 
             {activeSummaries.map((summary, index) => {
               const isPosition = summary.dataKey === "position";
-              const domain = isPosition ? ["auto", "auto"] : [0, "auto"];
 
               const showAxis = index < 2;
               if (!showAxis) {
+                // metric thứ 3,4: trục ẩn, chỉ để scale
+                const cfgHidden = buildYAxisConfig(
+                  chartData,
+                  summary.dataKey,
+                  isPosition
+                );
                 return (
                   <YAxis
                     key={summary.dataKey}
                     yAxisId={summary.dataKey}
-                    domain={domain}
+                    domain={cfgHidden.domain}
                     reversed={isPosition}
                     hide
                   />
                 );
               }
 
+              const { domain, ticks } = buildYAxisConfig(
+                chartData,
+                summary.dataKey,
+                isPosition
+              );
+
               const orientation =
-                activeSummaries.length === 1
-                  ? "left"
-                  : index === 0
-                  ? "left"
-                  : "right";
+                metricsCount === 1 ? "left" : index === 0 ? "left" : "right";
 
-              // 👉 LUÔN ưu tiên title cho tên cột
-              const labelText =  summary.tooltipName ;
+              const labelText = summary.tooltipName;
 
-              // HIỂN LABEL KHI ĐANG BẬT 1 HOẶC 2 METRIC
-              const shouldShowLabel = activeSummaries.length <= 2;
+              const hideTicks = metricsCount > 2;
+              const shouldShowLabel = metricsCount <= 2;
 
               return (
                 <YAxis
@@ -312,14 +426,18 @@ export default function PerformanceChart({
                   yAxisId={summary.dataKey}
                   domain={domain}
                   reversed={isPosition}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v) =>
-                    formatValue(summary.dataKey, v)
+                  ticks={hideTicks ? undefined : ticks}
+                  tick={hideTicks ? false : { fontSize: 12 }}
+                  tickFormatter={
+                    hideTicks
+                      ? undefined
+                      : (v) => formatValue(summary.dataKey, v)
                   }
                   axisLine={false}
                   tickLine={false}
-                  width={56}
+                  width={hideTicks ? 0 : axisWidth}
                   orientation={orientation}
+                  hide={false}
                 >
                   {shouldShowLabel && (
                     <Label
@@ -354,7 +472,6 @@ export default function PerformanceChart({
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 4, fill: s.color, stroke: "none" }}
-                    // 🔥 Tooltip & legend hiển thị đúng `title`
                     name={s.tooltipName}
                     isAnimationActive={false}
                     yAxisId={s.dataKey}
