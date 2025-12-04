@@ -153,7 +153,7 @@ export default function SearchQueriesTable({
   return (
     <div className="w-full bg-white rounded-xl shadow overflow-hidden">
       {/* Tabs */}
-      <div className="flex justify-center border-b gap-10 border-gray-200">
+      <div className="flex justify-center border-b  border-gray-200 px-12">
         {tabs.map((tab, idx) => (
           <button
             key={idx}
@@ -161,7 +161,7 @@ export default function SearchQueriesTable({
               setActiveTab(idx);
               setPage(1); // reset page khi đổi tab
             }}
-            className={`px-4 py-6 text-sm font-medium ${
+            className={`grow py-6 text-sm font-medium ${
               activeTab === idx
                 ? "border-b-2 border-gray-600 text-gray-900"
                 : "text-gray-500 hover:text-gray-700"
