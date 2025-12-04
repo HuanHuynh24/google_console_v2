@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link"; // thêm import Link
 import "simplebar-react/dist/simplebar.min.css";
-import favicon from "@/images/faviconV2.png";
+import favicon from "@/images/faviconV3.png";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import HomeIcon from "@mui/icons-material/Home";
 import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
@@ -96,7 +96,7 @@ export default function SideBar() {
     },
   ];
 
-  const [url, setUrl] = useState("https://webtop.vn/");
+  const [url, setUrl] = useState("https://noithatmocnguy...");
   const initialOpen = sidebarMenu.reduce((acc, section) => {
     if (section.title) acc[section.title] = true;
     return acc;

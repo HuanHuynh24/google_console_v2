@@ -38,7 +38,7 @@ export default function Header() {
             </span>
             <input
               className="w-full outline-0 placeholder:text-[#757575]"
-              placeholder={`Kiểm tra mọi URL trong "https://webtop.vn/"`}
+              placeholder={`Kiểm tra mọi URL trong "https://noithatmocnguyencuong.com/"`}
             ></input>
           </div>
         </div>
